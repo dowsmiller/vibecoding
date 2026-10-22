@@ -65,16 +65,16 @@ Empty lines still get an `<lb n="…"/>` element. If you are unsure whether any 
 Work through the phases in order. **Stop at the end of each phase** and wait for me.
 
 **Phase 1: Setup and "hello world"**
-Create `tei_editor/` with a virtual environment, `requirements.txt` (Flask, version pinned), a `.gitignore` (excluding `.venv/`, `__pycache__/`, and `*.bak`), and a minimal `app.py` that shows a page saying "TEI editor is running". Add a start script (`start.bat` for Windows, `start.sh` for macOS/Linux) that creates the virtual environment and installs requirements on first run, then starts the app and opens it in my browser. Write a short `README.md` with the exact commands for both systems.
-*My check: I run the start script and see the page in my browser.*
+Create `tei_editor/` with a virtual environment, `requirements.txt` (Flask, version pinned), a `.gitignore` (excluding `.venv/`, `__pycache__/`, and `*.bak`), and a minimal `app.py` that shows a page saying "TEI editor is running". Add a start script that I run by double-clicking: `start.bat` (Windows) and `start.command` (macOS, made executable). It must work from any location by first changing to its own folder. It must check that Python 3.11 or newer is installed, and say so in plain English if not. On first run it creates the virtual environment and installs requirements. It starts the app on port 5001 (not 5000, which macOS uses for AirPlay), opens it in my browser, and if anything fails it keeps the window open so I can read the message. Write a short `README.md` explaining, step by step, how to start the app on each system.
+*My check: I double-click the start script and see the page in my browser.*
 
 **Phase 2: The page layout**
 Show one column of 30 numbered, editable lines. No saving yet.
 *My check: I can type in every line, and the layout is readable.*
 
 **Phase 3: Saving to TEI**
-Add autosave, TEI generation, the backup file, the on-screen save status, and loading on startup. Also write `check_tei.py`, a separate script that reads `data/transcription.xml`, reports whether it is well-formed XML, and prints the number of `<pb/>`, `<cb/>`, and `<lb/>` elements.
-*My check: I type text, open the XML file, run `check_tei.py`, and restart the app to confirm my text is still there.*
+Add autosave, TEI generation, the backup file, the on-screen save status, and loading on startup. Also write `check_tei.py` and a double-clickable `check.bat` / `check.command` that runs it, shows the result, and waits for a key press. It reports whether `data/transcription.xml` is well-formed XML. It then checks the structure and reports each problem in plain English: there is exactly one `<pb/>`; there is at least one `<cb/>`; every `<cb/>` and `<lb/>` sits inside the `<p>`; columns are labelled a, b, c in order; and each column's lines are numbered 1, 2, 3 with no gaps or repeats. Finally, it prints the number of `<pb/>`, `<cb/>`, and `<lb/>` elements, and the number of lines in each column.
+*My check: I type text, open the XML file in VS Code, double-click the check script, and restart the app to confirm my text is still there.*
 
 **Phase 4: Editing the structure**
 Add and remove lines and columns, with confirmation for anything non-empty, and keep the TEI file in sync.
@@ -87,7 +87,8 @@ Test the edge cases: empty lines, `<` and `&`, accented and combining characters
 ## Working rules for the agent
 
 - Complete one phase at a time and stop at the end of each.
-- At each stop, tell me in plain English: which files you changed and why, how I can run and test the result, what you tested yourself, and any choice you made on my behalf.
+- Run all terminal commands yourself: do not assume that I know how to use the terminal.
+- At each stop, tell me in plain English: which files you changed and why, how I can run and test the result, what you tested yourself, and any choice you made on my behalf. Remind me to review the changes and commit them in GitHub Desktop before we continue.
 - Do not add features, files, or packages that are not in this plan. Ask first.
 - If anything in this plan is ambiguous or contradictory, ask me instead of guessing.
 - Write simple, readable code with comments aimed at a non-programmer, in small functions.

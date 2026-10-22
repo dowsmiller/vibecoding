@@ -14,7 +14,6 @@ This repository contains everything we need for the session. **Please complete t
 
 "Vibe-coding" means directing a large language model to write, run, and improve code through natural-language instruction, rather than programming by hand. In this workshop we will cover:
 
-- What vibe-coding is, and how it differs from other ways of using LLMs in research
 - When vibe-coded tools can be trusted, especially where the output can be verified
 - How to vibe-code effectively: prompt design, planning phases, iterative improvement, and choosing your tools and packages in advance
 - How to vibe-code safely: version control, using GitHub, and staying aware of what the model is changing
