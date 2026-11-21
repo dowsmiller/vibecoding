@@ -16,7 +16,7 @@ The first time you start the app, it creates its private Python environment and 
 
 1. Open the `tei_editor` folder in File Explorer.
 2. Double-click `start.bat`.
-3. Keep the black window open while you use the app. Your browser should open and show **TEI Page Editor**, with 30 editable lines in column **a**.
+3. Keep the black window open while you use the app. Your browser should open and show **TEI Page Editor**. A new transcription starts with 30 lines in column **a**; an existing transcription shows the lines you last saved.
 4. To stop the app, close the black window.
 
 ## Start the app on macOS
@@ -24,7 +24,7 @@ The first time you start the app, it creates its private Python environment and 
 1. Open the `tei_editor` folder in Finder.
 2. Double-click `start.command`.
 3. If macOS asks you to confirm, Control-click `start.command`, choose **Open**, and confirm **Open**.
-4. Keep the Terminal window open while you use the app. Your browser should open and show **TEI Page Editor**, with 30 editable lines in column **a**.
+4. Keep the Terminal window open while you use the app. Your browser should open and show **TEI Page Editor**. A new transcription starts with 30 lines in column **a**; an existing transcription shows the lines you last saved.
 5. To stop the app, close the Terminal window.
 
 ## Saving your transcription
@@ -55,5 +55,12 @@ You can open `data/transcription.xml` in VS Code to inspect the saved text. Rest
 
 ## If something goes wrong
 
-Read the message in the app or the window opened by a double-clicked script. If Python is missing or too old, install Python 3.11 or newer and try again. If Flask cannot be installed on the first run, connect to the internet and double-click the start script again. If the editor cannot load an existing XML file, it will stop rather than replace that file; keep the original and ask for help before changing it.
+Read the message in the app or the window opened by a double-clicked script.
+
+- If the save status shows an error, keep the app open; your text is still in the boxes. Read the message and ask for help if you are unsure how to fix the cause. After fixing it, make an edit to trigger another save and wait for **Saved at ...**.
+- If you try to leave while edits are waiting to be saved, choose the option to stay on the page. Wait for **Saved at ...** before closing the app.
+- If the checker says the file is well-formed but lists problems, the XML can be read but its page, column, or line structure needs attention. Keep the XML and its `.bak` backup; do not delete either file.
+- If the editor refuses to start because it cannot load an existing XML file, it has stopped to protect that file. Keep the original and ask for help before changing it.
+- If `data/transcription.xml` does not exist yet, type something in a line and wait for the first successful save; that creates the file.
+- If Python is missing or too old, install Python 3.11 or newer and try again. If Flask cannot be installed on the first run, connect to the internet and double-click the start script again.
 
