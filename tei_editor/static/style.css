@@ -87,6 +87,22 @@ h1 {
   outline: 3px solid rgb(49 95 133 / 20%);
 }
 
+.save-status {
+  min-height: 1.5rem;
+  margin: 1.25rem 0 0;
+  color: #4b463d;
+  line-height: 1.5;
+}
+
+.save-status[data-state="saved"] {
+  color: #225b35;
+}
+
+.save-status[data-state="error"] {
+  color: #9b1c1c;
+  font-weight: 600;
+}
+
 @media (max-width: 32rem) {
   body {
     padding: 1.25rem 0.75rem;

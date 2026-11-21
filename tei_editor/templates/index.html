@@ -6,25 +6,29 @@
     <title>TEI Page Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
-  <body>
+  <body data-has-saved-transcription="{{ 'true' if has_saved_transcription else 'false' }}">
     <main class="page">
       <header class="page-header">
         <h1>TEI Page Editor</h1>
         <p>Type one manuscript line in each box.</p>
-        <p class="notice">This version does not save your text yet. Anything you type will be lost when you leave or refresh this page.</p>
+        <p class="notice">Your work saves automatically about one second after you stop typing. Spaces at the beginning and end of each line are trimmed when saved.</p>
       </header>
 
       <section class="column" aria-labelledby="column-heading">
         <h2 id="column-heading">Column a</h2>
         <ol class="lines">
-          {% for number in line_numbers %}
+          {% for line in lines %}
           <li class="line">
-            <label for="line-{{ number }}" aria-label="Line {{ number }} in column a">{{ number }}</label>
-            <input id="line-{{ number }}" name="line-{{ number }}" type="text" autocomplete="off">
+            <label for="line-{{ loop.index }}" aria-label="Line {{ loop.index }} in column a">{{ loop.index }}</label>
+            <input id="line-{{ loop.index }}" name="line-{{ loop.index }}" type="text" value="{{ line }}" autocomplete="off">
           </li>
           {% endfor %}
         </ol>
+        <p id="save-status" class="save-status" role="status" aria-live="polite">
+          {% if has_saved_transcription %}Saved transcription loaded. No new changes.{% else %}No saved transcription yet.{% endif %}
+        </p>
       </section>
     </main>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   </body>
 </html>
