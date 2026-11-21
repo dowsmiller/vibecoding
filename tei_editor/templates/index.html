@@ -6,29 +6,66 @@
     <title>TEI Page Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
-  <body data-has-saved-transcription="{{ 'true' if has_saved_transcription else 'false' }}">
+  <body>
     <main class="page">
       <header class="page-header">
         <h1>TEI Page Editor</h1>
-        <p>Type one manuscript line in each box.</p>
-        <p class="notice">Your work saves automatically about one second after you stop typing. Spaces at the beginning and end of each line are trimmed when saved.</p>
+        <p>Type one manuscript line in each box. Columns are saved in order from left to right.</p>
+        <p class="notice">Your work saves automatically about one second after you stop typing. Structural changes save immediately. Spaces at the beginning and end of each line are trimmed when saved.</p>
       </header>
 
-      <section class="column" aria-labelledby="column-heading">
-        <h2 id="column-heading">Column a</h2>
-        <ol class="lines">
-          {% for line in lines %}
-          <li class="line">
-            <label for="line-{{ loop.index }}" aria-label="Line {{ loop.index }} in column a">{{ loop.index }}</label>
-            <input id="line-{{ loop.index }}" name="line-{{ loop.index }}" type="text" value="{{ line }}" autocomplete="off">
-          </li>
-          {% endfor %}
-        </ol>
-        <p id="save-status" class="save-status" role="status" aria-live="polite">
-          {% if has_saved_transcription %}Saved transcription loaded. No new changes.{% else %}No saved transcription yet.{% endif %}
-        </p>
-      </section>
+      <div id="column-grid" class="column-grid">
+        {% for column in columns %}
+        {% set column_index = loop.index0 %}
+        {% set column_label = column_labels[column_index] %}
+        <section class="column" data-column-index="{{ column_index }}" aria-labelledby="column-heading-{{ loop.index }}">
+          <div class="column-heading">
+            <h2 id="column-heading-{{ loop.index }}">Column {{ column_label }}</h2>
+            <div class="column-actions">
+              <button type="button" class="secondary-button" data-action="add-line">Add line</button>
+              <button type="button" class="secondary-button" data-action="remove-column">Remove column</button>
+            </div>
+          </div>
+          <ol class="lines">
+            {% for line in column %}
+            <li class="line">
+              <label for="line-{{ column_index }}-{{ loop.index }}" aria-label="Line {{ loop.index }} in column {{ column_label }}">{{ loop.index }}</label>
+              <input id="line-{{ column_index }}-{{ loop.index }}" name="line-{{ column_index }}-{{ loop.index }}" type="text" value="{{ line }}" autocomplete="off">
+              <button type="button" class="remove-line" data-action="remove-line" aria-label="Remove line {{ loop.index }} from column {{ column_label }}">Remove</button>
+            </li>
+            {% endfor %}
+          </ol>
+        </section>
+        {% endfor %}
+      </div>
+
+      <button id="add-column" type="button" class="add-column">Add column</button>
+      <p id="save-status" class="save-status" role="status" aria-live="polite">
+        {% if has_saved_transcription %}Saved transcription loaded. No new changes.{% else %}No saved transcription yet.{% endif %}
+      </p>
     </main>
+
+    <template id="column-template">
+      <section class="column">
+        <div class="column-heading">
+          <h2></h2>
+          <div class="column-actions">
+            <button type="button" class="secondary-button" data-action="add-line">Add line</button>
+            <button type="button" class="secondary-button" data-action="remove-column">Remove column</button>
+          </div>
+        </div>
+        <ol class="lines"></ol>
+      </section>
+    </template>
+
+    <template id="line-template">
+      <li class="line">
+        <label></label>
+        <input type="text" autocomplete="off">
+        <button type="button" class="remove-line" data-action="remove-line">Remove</button>
+      </li>
+    </template>
+
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   </body>
 </html>

@@ -45,6 +45,14 @@ The checker reports whether `data/transcription.xml` is well-formed XML, checks 
 
 You can open `data/transcription.xml` in VS Code to inspect the saved text. Restart the app to confirm that the text loads again.
 
+## Edit lines and columns
+
+- Choose **Add line** in a column to add a blank line at its end. Use **Remove** beside a line to remove that line.
+- Choose **Add column** to add a new column with 30 blank lines. Columns are labelled from left to right: `a`, `b`, `c`, and so on. After `z`, labels continue as `aa`, `ab`, and so on.
+- Choose **Remove column** to remove a column. If a line or column contains non-whitespace text, the app asks you to confirm before removing it. If you cancel, nothing changes.
+- The last line in a column and the last column cannot be removed.
+- Confirmed structural changes are saved immediately.
+
 ## If something goes wrong
 
 Read the message in the app or the window opened by a double-clicked script. If Python is missing or too old, install Python 3.11 or newer and try again. If Flask cannot be installed on the first run, connect to the internet and double-click the start script again. If the editor cannot load an existing XML file, it will stop rather than replace that file; keep the original and ask for help before changing it.

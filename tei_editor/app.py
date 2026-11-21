@@ -32,6 +32,22 @@ def tei_tag(name: str) -> str:
     return f"{{{TEI_NAMESPACE}}}{name}"
 
 
+def xml_local_name(element: ET.Element) -> str:
+    """Return an element's name without its XML namespace."""
+    if not isinstance(element.tag, str):
+        return ""
+    return element.tag.rsplit("}", 1)[-1]
+
+
+def column_label(index: int) -> str:
+    """Return alphabetic column labels: a through z, then aa, ab, and so on."""
+    label = ""
+    while index >= 0:
+        label = chr(ord("a") + index % 26) + label
+        index = index // 26 - 1
+    return label
+
+
 def line_text_from_element(element: ET.Element) -> str:
     """Read the text that follows an empty line-break element."""
     if len(element) or element.text is not None:
@@ -44,12 +60,14 @@ def line_text_from_element(element: ET.Element) -> str:
     return line_text
 
 
-def load_transcription(path: Path = TRANSCRIPTION_FILE) -> tuple[list[str], bool]:
-    """Load this editor's single-column transcription, or start with 30 blank lines."""
+def load_transcription(
+    path: Path = TRANSCRIPTION_FILE,
+) -> tuple[list[list[str]], bool]:
+    """Load the transcription, or start with one column of 30 blank lines."""
     try:
         root = ET.parse(path).getroot()
     except FileNotFoundError:
-        return [""] * 30, False
+        return [[""] * 30], False
     except (ET.ParseError, OSError) as error:
         raise TranscriptionLoadError(str(error)) from error
 
@@ -69,33 +87,54 @@ def load_transcription(path: Path = TRANSCRIPTION_FILE) -> tuple[list[str], bool
     children = list(paragraph)
     if len(children) < 3 or children[0].tag != tei_tag("pb"):
         raise TranscriptionLoadError("The paragraph must start with one page marker.")
-    if children[1].tag != tei_tag("cb") or children[1].get("n") != "a":
-        raise TranscriptionLoadError("This phase can load only column a.")
     if children[0].get("n") != "1":
         raise TranscriptionLoadError("The page marker must be numbered 1.")
-    if any(child.tag != tei_tag("lb") for child in children[2:]):
+    if any(child.tag not in {tei_tag("cb"), tei_tag("lb")} for child in children[1:]):
         raise TranscriptionLoadError("The paragraph contains unsupported markup.")
-    if not children[2:]:
-        raise TranscriptionLoadError("The transcription must contain at least one line.")
 
-    expected_markers = [tei_tag("pb"), tei_tag("cb"), *([tei_tag("lb")] * (len(children) - 2))]
+    marker_names = {"pb", "cb", "lb"}
+    expected_markers = [child.tag for child in children]
     actual_markers = [
         element.tag
         for element in root.iter()
-        if element.tag in {tei_tag("pb"), tei_tag("cb"), tei_tag("lb")}
+        if xml_local_name(element) in marker_names
     ]
     if actual_markers != expected_markers:
         raise TranscriptionLoadError("The file contains page or line markers outside the paragraph.")
 
-    lines = []
-    for number, element in enumerate(children[2:], start=1):
-        if element.get("n") != str(number):
-            raise TranscriptionLoadError(
-                f"Line {number} must have the line number {number}."
-            )
-        lines.append(line_text_from_element(element))
+    if sum(xml_local_name(element) == "pb" for element in root.iter()) != 1:
+        raise TranscriptionLoadError("The transcription must contain exactly one page marker.")
 
-    return lines, True
+    for element in children[:2]:
+        if len(element) or element.text is not None:
+            raise TranscriptionLoadError("A page or column marker contains unexpected content.")
+
+    columns = []
+    current_column = None
+    for element in children[1:]:
+        if element.tag == tei_tag("cb"):
+            expected_label = column_label(len(columns))
+            if element.get("n") != expected_label:
+                raise TranscriptionLoadError(
+                    f"Column {len(columns) + 1} must be labelled {expected_label}."
+                )
+            columns.append([])
+            current_column = columns[-1]
+        else:
+            if current_column is None:
+                raise TranscriptionLoadError("A line appears before the first column marker.")
+            expected_number = len(current_column) + 1
+            if element.get("n") != str(expected_number):
+                raise TranscriptionLoadError(
+                    f"Line {expected_number} in column {column_label(len(columns) - 1)} "
+                    f"must be numbered {expected_number}."
+                )
+            current_column.append(line_text_from_element(element))
+
+    if not columns or any(not column for column in columns):
+        raise TranscriptionLoadError("Every column must contain at least one line.")
+
+    return columns, True
 
 
 def is_xml_character(character: str) -> bool:
@@ -109,11 +148,18 @@ def is_xml_character(character: str) -> bool:
     )
 
 
-def build_transcription_xml(lines: list[str]) -> bytes:
+def build_transcription_xml(columns: list[list[str]]) -> bytes:
     """Build the page's TEI XML without normalising the line text."""
-    for number, line in enumerate(lines, start=1):
-        if any(not is_xml_character(character) for character in line):
-            raise ValueError(f"Line {number} contains a character that XML cannot store.")
+    if not columns or any(not column for column in columns):
+        raise ValueError("The transcription must contain at least one line in every column.")
+
+    for column_number, column in enumerate(columns, start=1):
+        for line_number, line in enumerate(column, start=1):
+            if any(not is_xml_character(character) for character in line):
+                raise ValueError(
+                    f"Line {line_number} in column {column_label(column_number - 1)} "
+                    "contains a character that XML cannot store."
+                )
 
     root = ET.Element(tei_tag("TEI"))
     header = ET.SubElement(root, tei_tag("teiHeader"))
@@ -130,31 +176,36 @@ def build_transcription_xml(lines: list[str]) -> bytes:
     division = ET.SubElement(body, tei_tag("div"))
     paragraph = ET.SubElement(division, tei_tag("p"))
     ET.SubElement(paragraph, tei_tag("pb"), {"n": "1"})
-    ET.SubElement(paragraph, tei_tag("cb"), {"n": "a"})
 
     line_elements = []
-    for number in range(1, len(lines) + 1):
-        line_elements.append(
-            ET.SubElement(paragraph, tei_tag("lb"), {"n": str(number)})
-        )
+    for column_number, column in enumerate(columns):
+        ET.SubElement(paragraph, tei_tag("cb"), {"n": column_label(column_number)})
+        for line_number, line in enumerate(column, start=1):
+            element = ET.SubElement(
+                paragraph, tei_tag("lb"), {"n": str(line_number)}
+            )
+            line_elements.append((element, line))
 
     ET.indent(root, space="  ")
-    for number, (element, line) in enumerate(zip(line_elements, lines), start=1):
-        indentation = "\n        " if number == len(lines) else "\n          "
+    for number, (element, line) in enumerate(line_elements, start=1):
+        indentation = "\n        " if number == len(line_elements) else "\n          "
         element.tail = line.strip(" ") + indentation
 
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
 def save_transcription(
-    lines: list[str], path: Path | None = None
-) -> list[str]:
+    columns: list[list[str]], path: Path | None = None
+) -> list[list[str]]:
     """Back up and safely replace the TEI file; return the saved, trimmed lines."""
     if path is None:
         path = TRANSCRIPTION_FILE
 
-    saved_lines = [line.strip(" ") for line in lines]
-    xml_bytes = build_transcription_xml(saved_lines)
+    saved_columns = [
+        [line.strip(" ") for line in column]
+        for column in columns
+    ]
+    xml_bytes = build_transcription_xml(saved_columns)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.exists():
@@ -178,11 +229,11 @@ def save_transcription(
         if temporary_path is not None and temporary_path.exists():
             temporary_path.unlink()
 
-    return saved_lines
+    return saved_columns
 
 
 try:
-    CURRENT_LINES, HAS_SAVED_TRANSCRIPTION = load_transcription()
+    CURRENT_COLUMNS, HAS_SAVED_TRANSCRIPTION = load_transcription()
 except TranscriptionLoadError as error:
     raise SystemExit(
         "ERROR: The existing transcription could not be loaded safely, so the editor "
@@ -196,7 +247,8 @@ def home():
     """Show the current transcription."""
     return render_template(
         "index.html",
-        lines=CURRENT_LINES,
+        columns=CURRENT_COLUMNS,
+        column_labels=[column_label(index) for index in range(len(CURRENT_COLUMNS))],
         has_saved_transcription=HAS_SAVED_TRANSCRIPTION,
     )
 
@@ -214,23 +266,22 @@ def save():
     except (json.JSONDecodeError, UnicodeDecodeError):
         return jsonify(error="The browser sent an unreadable save request. Please try again."), 400
 
-    if not isinstance(payload, dict) or not isinstance(payload.get("lines"), list):
-        return jsonify(error="The transcription lines could not be read. Please try again."), 400
+    if not isinstance(payload, dict) or not isinstance(payload.get("columns"), list):
+        return jsonify(error="The transcription columns could not be read. Please try again."), 400
 
-    lines = payload["lines"]
-    if any(not isinstance(line, str) for line in lines):
+    columns = payload["columns"]
+    if not columns or any(not isinstance(column, list) or not column for column in columns):
+        return jsonify(error="Every column must contain at least one line."), 400
+    if any(not isinstance(line, str) for column in columns for line in column):
         return jsonify(error="Every transcription line must be text."), 400
 
     with SAVE_LOCK:
-        if len(lines) != len(CURRENT_LINES):
-            return jsonify(error="The number of lines changed unexpectedly. Reload the page."), 400
-
         try:
-            saved_lines = save_transcription(lines)
+            saved_columns = save_transcription(columns)
         except (OSError, UnicodeError, ValueError) as error:
             return jsonify(error=f"Could not save the transcription: {error}"), 500
 
-        CURRENT_LINES[:] = saved_lines
+        CURRENT_COLUMNS[:] = saved_columns
         HAS_SAVED_TRANSCRIPTION = True
 
     saved_at = datetime.now().astimezone().strftime("%H:%M:%S")
